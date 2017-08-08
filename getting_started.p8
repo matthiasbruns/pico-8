@@ -4,13 +4,13 @@ __lua__
 dbg = ""
 ents={}
 
-function update_ents()
-	foreach(ents, update_entity)
-end
-
 function update_entity(entity)
 	entity.x+=entity.vx
 	entity.y+=entity.vy
+end
+
+function render_entity(entity)
+	spr(entity.spr,entity.x,entity.y)
 end
 
 function _init()
@@ -21,7 +21,7 @@ function _init()
  entity.vx=0
  entity.vy=0
  entity.spd=30
-	
+	entity.spr=1
 	add(ents, entity)
 	add(ents, entity)
 	
@@ -34,9 +34,8 @@ end
 
 function _draw()
  cls(7)
-	spr(1,ents[1].x,ents[1].y)
-	
- debug(118 - (#dbg*3), 2)
+	foreach(ents, render_entity)
+	debug(118 - (#dbg*3), 2)
 end
 
 function _update60()
@@ -55,7 +54,7 @@ function _update60()
 	entity.vx = vx
 	entity.vy = 0
 	
-	update_ents()
+	foreach(ents, update_entity)
 end 
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
