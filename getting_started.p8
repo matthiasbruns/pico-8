@@ -1,12 +1,12 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
-player = {}
-player.x=0
-player.y=120
-player.vx=0
-player.vy=0
-entities={}
+dbg = ""
+ents={}
+
+function update_ents()
+	foreach(ents, update_entity)
+end
 
 function update_entity(entity)
 	entity.x+=entity.vx
@@ -14,36 +14,48 @@ function update_entity(entity)
 end
 
 function _init()
- entity = {}
+	dbg = "init"
+	local entity = {}
  entity.x=0
- entity.y=0
+ entity.y=120
  entity.vx=0
  entity.vy=0
-	add(entites, entity)
+ entity.spd=30
+	
+	add(ents, entity)
+	add(ents, entity)
+	
+	dbg=("ents "..#ents)
+end
+
+function debug(x,y)
+  print(dbg,x,y)
 end
 
 function _draw()
  cls(7)
-
-	print('test')
-	spr(1,player.x,player.y)
+	spr(1,ents[1].x,ents[1].y)
+	
+ debug(118 - (#dbg*3), 2)
 end
 
 function _update60()
-	print("update")
-	vx = player.vx
+	dbg = "update "..#ents
+	local vx = ents[1].vx
  
  if btn(0) then
- 	vx = -1
+ 	vx = -ents[1].spd/60
 	elseif btn(1) then
-	 vx = 1
+	 vx = ents[1].spd/60
 	else
 	 vx *= 0.5
  end
  
- player.vx = vx
- player.vy = 0
- update_entity(player)
+	local	entity = ents[1]
+	entity.vx = vx
+	entity.vy = 0
+	
+	update_ents()
 end 
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
