@@ -3,17 +3,47 @@ version 8
 __lua__
 player = {}
 player.x=0
-player.y=0
-tick=0
+player.y=120
+player.vx=0
+player.vy=0
+entities={}
+
+function update_entity(entity)
+	entity.x+=entity.vx
+	entity.y+=entity.vy
+end
+
+function _init()
+ entity = {}
+ entity.x=0
+ entity.y=0
+ entity.vx=0
+ entity.vy=0
+	add(entites, entity)
+end
 
 function _draw()
  cls(7)
-	spr(1,player.x,player.x)
+
+	print('test')
+	spr(1,player.x,player.y)
 end
 
 function _update60()
- tick=1/60
- player.x += (10 * tick)
+	print("update")
+	vx = player.vx
+ 
+ if btn(0) then
+ 	vx = -1
+	elseif btn(1) then
+	 vx = 1
+	else
+	 vx *= 0.5
+ end
+ 
+ player.vx = vx
+ player.vy = 0
+ update_entity(player)
 end 
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
