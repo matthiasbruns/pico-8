@@ -89,6 +89,9 @@ function _init()
  cam = {}
  cam.x=0
  cam.y=0
+ state=1
+ mus_pat=0
+ music(mus_pat)
  for x=1,1 do
   actor_new()
  end
@@ -109,6 +112,20 @@ end
 function _update60()
  t += 1
  dbg = "actors "..#actors
+
+ if state == 0 then 
+  state_explore()
+ elseif state == 0 then
+  state_fight()
+ end 
+end
+
+function state_explore()
+ if not mus_pat == 0 then
+  music(0)
+  mus_pat = 0
+ end
+
  local vx = actors[1].vx
  local vy = actors[1].vy
  
@@ -117,6 +134,7 @@ function _update60()
  elseif btn(1) then
   vx = actors[1].spd
  end
+
  if btn(2) then
   vy = -actors[1].spd
  elseif btn(3) then
@@ -129,7 +147,14 @@ function _update60()
 
  foreach(actors, actor_update)
  cam_update()
-end 
+end
+
+function state_fight()
+ if not mus_pat == 1 then
+  music(1)
+  mus_pat = 1
+ end
+end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
