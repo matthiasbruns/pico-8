@@ -94,11 +94,9 @@ function _init()
  end
  music(0)
 end
-c = 0
+
 function _draw()
- cls(7)
- pal(c,c%15)
- c += 1
+ cls(3)
  map(0, 0, 0, 0, 128, 32)
 
  camera(cam.x, cam.y)
