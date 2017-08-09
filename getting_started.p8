@@ -9,6 +9,11 @@ function debug(x,y)
  print(dbg,x,y)
 end
 
+---START--------------
+-- ACTORS
+----------------------
+
+-- updates the actor based on velocity
 function actor_update(actor)
  -- movement
  actor.x+=actor.vx
@@ -31,10 +36,12 @@ function actor_update(actor)
  end 
 end
 
+-- rendered the actor in the draw event
 function actor_render(actor)
  spr(actor.frame,actor.x,actor.y)
 end
 
+-- creates a new actor and returns its id
 function actor_new()
  local actor = {}
  actor.x=0
@@ -49,6 +56,15 @@ function actor_new()
  add(acts, actor)
  return #acts
 end
+----------------------
+-- ACTORS
+---END----------------
+
+---START--------------
+-- PHYSICS
+----------------------
+
+-- updates the actor based on velocity
 
 function _init()
  for x=1,1 do
