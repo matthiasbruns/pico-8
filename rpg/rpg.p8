@@ -1,6 +1,49 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
+
+---start--------------
+-- PICO-8
+function _init()
+ dbg = "" -- debug message
+ t = 0 --timer
+ actors={} -- 1:player
+ cam = {}
+ cam.x=0
+ cam.y=0
+ state=1
+ mus_pat=0
+ music(mus_pat)
+ for x=1,1 do
+  actor_new()
+ end
+ -- music(0)
+end
+
+function _draw()
+ cls(3)
+ map(0, 0, 0, 0, 128, 32)
+
+ camera(cam.x, cam.y)
+ rectfill(80,80,120,100,12)
+
+ foreach(actors, actor_render)
+ debug(118 - (#dbg*3), 2)
+end
+
+function _update60()
+ t += 1
+ dbg = "actors "..#actors
+
+ if state == 0 then 
+  state_explore()
+ elseif state == 0 then
+  state_fight()
+ end 
+end
+-- PICO-8
+---end--------------
+
 function debug(x,y)
  print(dbg,cam.x + x,cam.y + y)
 end
@@ -71,6 +114,10 @@ function actor_new()
 end
 -- actors
 ---end----------------
+
+---start--------------
+-- physics
+
 -- test if a point is solid
 function solid (x, y)
   if (x < 0 or x >= 128 ) then
@@ -79,46 +126,11 @@ function solid (x, y)
   val = mget(x, y)
   return fget(val, 0)
 end
----start--------------
 -- physics
+---end----------------
 
-function _init()
- dbg = "" -- debug message
- t = 0 --timer
- actors={} -- 1:player
- cam = {}
- cam.x=0
- cam.y=0
- state=1
- mus_pat=0
- music(mus_pat)
- for x=1,1 do
-  actor_new()
- end
- -- music(0)
-end
-
-function _draw()
- cls(3)
- map(0, 0, 0, 0, 128, 32)
-
- camera(cam.x, cam.y)
- rectfill(80,80,120,100,12)
-
- foreach(actors, actor_render)
- debug(118 - (#dbg*3), 2)
-end
-
-function _update60()
- t += 1
- dbg = "actors "..#actors
-
- if state == 0 then 
-  state_explore()
- elseif state == 0 then
-  state_fight()
- end 
-end
+---start--------------
+-- states
 
 function state_explore()
  if not mus_pat == 0 then
@@ -155,6 +167,8 @@ function state_fight()
   mus_pat = 1
  end
 end
+-- states
+---end----------------
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000001100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
