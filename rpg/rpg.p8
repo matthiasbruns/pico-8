@@ -25,14 +25,18 @@ end
 -- pico-8 draw loop
 function _draw()
  if state == 0 then 
+  -- menu rendering
   cls(0)
   draw_padding()
-  -- menu rendering
-   print("pico-8 rpg framework", 25, 16, 7) -- name of the game
-   print("press x to start", 32, 64, 7) -- start game instructions
+
+  -- name of the game
+  print("pico-8 rpg framework", 25, 16, 7)
+  -- start game instructions
+  print("press x to start", 32, 64, 7)
  elseif state == 1 then
   cls(3)
   draw_padding()
+
   camera(cam.x, cam.y)
   -- explore rendering
   map(0, 0, 0, 0, 128, 32)
@@ -41,6 +45,7 @@ function _draw()
  elseif state == 2 then
   cls(7)
   draw_padding()
+
   -- fight rendering
   map(0, 0, 0, 0, 128, 32)
  end  
@@ -58,36 +63,41 @@ end
 
 -- pico-8 update loop
 function _update60()
- t += 1 -- counter 
+ -- counter 
+ t += 1
 
  if state == 0 then
- -- menu state updates 
+  -- menu state updates 
   update_menu()
  elseif state == 1 then
- -- explore state updates
+  -- explore state updates
   update_explore()
  elseif state == 2 then
- -- fight state updates
+  -- fight state updates
   update_fight()
  end
 end
 -- pico-8
 ---end--------------
 
--- debug command to display 
--- debug texts on screen
--- test is red
+--[[
+ debug command to display 
+ debug texts on screen
+ test is red
+]]  
 function debug(x,y)
 	rectfill(0,0,10,10, 1)
  print(dbg,cam.x + x,cam.y + y, 8)
 end
 
 ---start--------------
--- cam,
+-- cam
 
--- update the camera
--- based on the player
--- position actor[1]
+--[[
+ update the camera
+ based on the player
+ position actor[1]
+]]
 function cam_update()
  cam.x = actors[1].x - 62
  cam.y = actors[1].y - 96
@@ -106,12 +116,12 @@ function actor_update(actor)
 
  if abs(actor.vx) > abs(actor.vy) then
   -- left/right
-   actor.diry = 0
-   actor.dirx = actor.vx / abs(actor.vx)
+  actor.diry = 0
+  actor.dirx = actor.vx / abs(actor.vx)
  else
  -- up/down
-   actor.diry = actor.vy / abs(actor.vy)
-   actor.dirx = 0
+  actor.diry = actor.vy / abs(actor.vy)
+  actor.dirx = 0
  end
 
  dbg="dirx "..actor.dirx.." diry "..actor.diry
@@ -178,9 +188,13 @@ function solid (x, y)
     return true end
         
   val = mget(x, y)
-  -- 0: the first
-  -- orange dot in the
-  -- sprite editor
+  --[[
+   the first (0)
+   orange dot in the
+   sprite editor is
+   the solid collision
+   flag.
+  ]]
   return fget(val, 0)
 end
 -- physics
@@ -198,41 +212,90 @@ function update_menu()
  if btn(5) then state += 1 end
 end
 
+--[[
+  this state is the 
+  default state of the game.
+  you can run around and
+  explore the world of
+  you rpg game.
+]]
 function update_explore()
+ --[[
+  change the music pattern to 1
+  of not in the explore
+  pattern range.
+ ]] 
  if mus_pat < 1 or mus_pat > 4 then
   music(1)
   mus_pat = 1
  end
  padding=0
 
+ -- actors[1] is p1
  local vx = actors[1].vx
  local vy = actors[1].vy
  
+ --[[
+  check if p1 presses
+  left or right and
+  set the velocity
+  of the actor to
+  its speed value.
+ ]]
  if btn(0) then
   vx = -actors[1].spd
  elseif btn(1) then
   vx = actors[1].spd
  end
 
+ --[[
+  check if p1 presses
+  up or down and
+  set the velocity
+  of the actor to
+  its speed value.
+ ]]
  if btn(2) then
   vy = -actors[1].spd
  elseif btn(3) then
   vy = actors[1].spd
  end 
  
- local	actor = actors[1]
- actor.vx = vx
- actor.vy = vy
+ actors[1].vx = vx
+ actors[1].vy = vy
 
+ --[[
+  update all active
+  actors each update call.
+ ]]
  foreach(actors, actor_update)
  cam_update()
 end
 
+--[[
+  this state is active
+  when you happen to
+  find and attack an
+  enemy. our implementation
+  of a fight is a round-based
+  fight mode as in the
+  old ff games.
+]]
 function update_fight()
+ --[[
+  change the music pattern to 5
+  of not in the fight
+  pattern range.
+ ]] 
  if mus_pat != 5 then
   music(5)
   mus_pat = 5
  end
+
+ --[[
+  the fight screen should
+  have a padding
+ ]]
  padding=8
 end
 -- states
