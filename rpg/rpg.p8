@@ -113,16 +113,21 @@ function actor_update(actor)
  -- current actor
  actor.x+=actor.vx
  actor.y+=actor.vy
-
- if abs(actor.vx) > abs(actor.vy) then
-  -- left/right
-  actor.diry = 0
-  actor.dirx = actor.vx / abs(actor.vx)
- else
+ 
+ -- left/right
+ if actor.vx < 0 then
+  actor.dirx = -1
+ elseif actor.vx > 0 then
+  actor.dirx = 1
+ end  
  -- up/down
-  actor.diry = actor.vy / abs(actor.vy)
+ if actor.vy < 0 then
+  actor.diry = -1
   actor.dirx = 0
- end
+ elseif actor.vy > 0 then
+  actor.diry = 1
+  actor.dirx = 0
+ end 
 
  dbg="dirx "..actor.dirx.." diry "..actor.diry
 
