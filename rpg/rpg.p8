@@ -49,26 +49,31 @@ function _draw()
   rectfill(cam.x + (screen.w - 4 - #dbg*4), cam.y, cam.x+screen.w, cam.y+10,14)
   foreach(actors, actor_render)
  elseif state == 2 then
-  cls(7)
-  draw_padding()
-
-  -- fight rendering
-  map(0, 0, 0, 0, 128, 32)
-
-  -- fight frames
-  local xMin = cam.x
-  -- align bottom
-  local yMin = cam.y + screen.h 
-  -- second number is height
-  local height = screen.h-50 
-  -- larger 64 = overlap
-  local width = 60 
-
-  -- 
-  rectfill(xMin ,yMin, width, height, 14) 
-  rectfill(xMin + screen.w, yMin, screen.w - width, height, 12)
+  draw_fight()
  end  
   debug(128 - (#dbg*4), 2)
+end
+
+function draw_fight()
+ cls(7)
+ --draw_padding()
+
+ -- fight rendering
+ map(0, 0, 0, 0, screen.h, 32)
+
+ -- fight panels
+ local xMin = cam.x
+ -- align bottom
+ local yMin = cam.y + screen.h 
+ -- second number is height
+ local height = 50 
+ -- larger 64 = overlap
+ local width = 64 
+
+ -- 
+ rectfill(xMin, yMin - height, xMin + width, yMin, 14) 
+ rectfill(xMin + width, yMin - height, xMin + screen.w, yMin, 13) 
+ --rectfill(screen.w + width, yMin, screen.w - width, height, 12)
 end
 
 function draw_padding()
@@ -109,7 +114,6 @@ end
  test is red
 ]]  
 function debug(x,y)
-	rectfill(0,0,10,10, 1)
  print(dbg,cam.x + x,cam.y + y, 8)
 end
 
