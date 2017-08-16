@@ -25,6 +25,7 @@ function _init()
  for x=1,1 do
   actor_new()
  end
+ player = actors[1]
  -- music(0)
 end
 
@@ -67,13 +68,13 @@ function draw_fight()
  local yMin = cam.y + screen.h 
  -- second number is height
  local height = 50 
- -- larger 64 = overlap
+ -- larger (screen.w * 0.5) = overlap
  local width = (screen.w * 0.5) - 10
 
- -- 
+ -- left rect
  rectfill(xMin, yMin - height, xMin + width, yMin, 14) 
+ --right rect
  rectfill(xMin + screen.w, yMin - height, xMin + screen.w - width, yMin, 13) 
- --rectfill(screen.w + width, yMin, screen.w - width, height, 12)
 end
 
 function draw_padding()
@@ -126,8 +127,8 @@ end
  position actor[1]
 ]]
 function cam_update()
- cam.x = actors[1].x - 62
- cam.y = actors[1].y - 96
+ cam.x = player.x - (screen.w * 0.5 - player.w)
+ cam.y = player.y - (screen.h - 32)
 end
 -- cam
 ---end--------------
@@ -198,6 +199,8 @@ function actor_new()
  actor.y=118
  actor.vx=0
  actor.vy=0
+ actor.w=2
+ actor.h=5
  actor.dirx=0
  actor.diry=0
  actor.health=1
@@ -266,8 +269,8 @@ function update_explore()
  padding=0
 
  -- actors[1] is p1
- local vx = actors[1].vx
- local vy = actors[1].vy
+ local vx = player.vx
+ local vy = player.vy
  
  --[[
   check if p1 presses
@@ -277,9 +280,9 @@ function update_explore()
   its speed value.
  ]]
  if btn(0) then
-  vx = -actors[1].spd
+  vx = -player.spd
  elseif btn(1) then
-  vx = actors[1].spd
+  vx = player.spd
  end
 
  --[[
@@ -290,13 +293,13 @@ function update_explore()
   its speed value.
  ]]
  if btn(2) then
-  vy = -actors[1].spd
+  vy = -player.spd
  elseif btn(3) then
-  vy = actors[1].spd
+  vy = player.spd
  end 
  
- actors[1].vx = vx
- actors[1].vy = vy
+ player.vx = vx
+ player.vy = vy
 
  --[[
   update all active
