@@ -73,28 +73,20 @@ function draw_fight()
  -- larger (screen.w * 0.5) = overlap
  local width = (screen.w * 0.5) - 10
 
+ local enemyactor = actors[enemy]
  -- left rect
  rectfill(xmin, ymin - height, xmin + width, ymin, 14) 
  --right rect
  rectfill(xmin + screen.w, ymin - height, xmin + screen.w - width, ymin, 13) 
 
- --[[
-  sspr sx sy sw sh dx dy [dw dh] [flip_x] [flip_y]
-
-		Stretch rectangle from sprite sheet (sx, sy, sw, sh) // given in pixels
-		and draw in rectangle (dx, dy, dw, dh)
-		Colour 0 drawn as transparent by default (see palt())
-		dw, dh defaults to sw, sh
-		flip_x=true to flip horizontally
-		flip_y=true to flip vertically
- ]]
+ -- left health
+ line(xmin, ymin - height, xmin + width * (enemyactor.health / enemyactor.max_health), ymin - height, 11) 
+ -- right health
+ line(xmin + screen.w - width * (enemyactor.health / enemyactor.max_health), ymin - height, xmin + screen.w, ymin - height, 11) 
 
  -- draw player
  sspr(player.frame * 8, 0, 8, 8, xmin + width * 0.25 - player.w, ymin - height + 8, 32, 32)
-
  -- draw enemy
- local enemyactor = actors[enemy]
- dbg="fr:"..enemyactor.frame
  sspr(enemyactor.frame * 8, 0, 8, 8, xmin + screen.w - width * 0.75, ymin - height + 8, 32, 32, true, false)
 end
 
@@ -224,7 +216,8 @@ function actor_new()
  actor.h=5
  actor.dirx=0
  actor.diry=0
- actor.health=1
+ actor.health=10
+ actor.max_health=10
  actor.spd=1
  actor.spr_index=0 -- start of sheet
  actor.frame=0 -- start of animation
