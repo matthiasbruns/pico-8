@@ -8,6 +8,12 @@ __lua__
 function _init()
  dbg = "" -- debug message
  t = 0 --timer
+
+ -- dynamic screen sizing
+ screen = {}
+ screen.w=128
+ screen.h=128
+
  actors={} -- 1:player
  cam = {}
  cam.x=0
@@ -28,7 +34,7 @@ function _draw()
   -- menu rendering
   cls(0)
   draw_padding()
-
+  camera()
   -- name of the game
   print("pico-8 rpg framework", 25, 16, 7)
   -- start game instructions
@@ -39,8 +45,8 @@ function _draw()
 
   camera(cam.x, cam.y)
   -- explore rendering
-  map(0, 0, 0, 0, 128, 32)
-  rectfill(cam.x + (124 - #dbg*4),cam.y,cam.x+128,cam.y+10,14)
+  map(0, 0, 0, 0, screen.h, 32)
+  rectfill(cam.x + (screen.w - 4 - #dbg*4), cam.y, cam.x+screen.w, cam.y+10,14)
   foreach(actors, actor_render)
  elseif state == 2 then
   cls(7)
@@ -48,6 +54,19 @@ function _draw()
 
   -- fight rendering
   map(0, 0, 0, 0, 128, 32)
+
+  -- fight frames
+  local xMin = cam.x
+  -- align bottom
+  local yMin = cam.y + screen.h 
+  -- second number is height
+  local height = screen.h-50 
+  -- larger 64 = overlap
+  local width = 60 
+
+  -- 
+  rectfill(xMin ,yMin, width, height, 14) 
+  rectfill(xMin + screen.w, yMin, screen.w - width, height, 12)
  end  
   debug(128 - (#dbg*4), 2)
 end
@@ -65,6 +84,10 @@ end
 function _update60()
  -- counter 
  t += 1
+
+ if btnp(4) then 
+  state = (state +1) % 3 
+ end
 
  if state == 0 then
   -- menu state updates 
@@ -214,7 +237,9 @@ function update_menu()
  end
  padding=0
 
- if btn(5) then state += 1 end
+ dbg=""
+
+ if btnp(5) then state += 1 end
 end
 
 --[[
