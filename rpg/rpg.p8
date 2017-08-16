@@ -68,11 +68,11 @@ function draw_fight()
  -- second number is height
  local height = 50 
  -- larger 64 = overlap
- local width = 64 
+ local width = (screen.w * 0.5) - 10
 
  -- 
  rectfill(xMin, yMin - height, xMin + width, yMin, 14) 
- rectfill(xMin + width, yMin - height, xMin + screen.w, yMin, 13) 
+ rectfill(xMin + screen.w, yMin - height, xMin + screen.w - width, yMin, 13) 
  --rectfill(screen.w + width, yMin, screen.w - width, height, 12)
 end
 
