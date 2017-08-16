@@ -192,22 +192,24 @@ function actor_update(actor)
   actor.vy = 0
  end
  
- tx = actor.x + actor.vx 
- ty = actor.y + actor.vy
+ local tx = actor.x + actor.vx 
+ local ty = actor.y + actor.vy
 
- if(actor.id == 1) then
   -- check for collision
-  while isSolid(tx, ty)  do
-   if actor.x < tx then
-    tx -= 1
-   elseif actor.x > tx then
-    tx += 1
-   end
-   if actor.y < ty then
-    ty -= 1
-   elseif actor.y > ty then
-    ty += 1
-   end  
+ while is_solid_a(actor, tx, ty)  do
+  if actor.x < tx then
+   tx -= 1
+  elseif actor.x > tx then
+   tx += 1
+  end
+  if actor.y < ty then
+   ty -= 1
+  elseif actor.y > ty then
+   ty += 1
+  end  
+
+  if tx == actor.x and ty == actor.y then
+   break
   end
  end
  -- check for actor interaction
@@ -266,6 +268,8 @@ function actor_draw(actor)
 		flip_y=true to flip vertically
 ]]
  spr(actor.frame,actor.x,actor.y,1 ,1, actor.dirx < 0, false)
+ rectfill(actor.x, actor.y, actor.x + 1, actor.y + 1, 2)
+ rect(actor.x + actor.boxx,actor.y + actor.boxy,actor.x + actor.boxx+ actor.boxdx,actor.y + actor.boxy+ actor.boxdy, 8)
 end
 
 -- creates a new actor and returns its id
@@ -280,6 +284,10 @@ function actor_new(index)
  actor.vy=0
  actor.w=2
  actor.h=5
+ actor.boxx=0
+ actor.boxdx=7
+ actor.boxy=0
+ actor.boxdy=7
  if rnd(2) < 1 then
   actor.dirx = -1
  else 
@@ -310,9 +318,26 @@ end
 
 ---start--------------
 -- physics
+function is_solid_rect(x, y, dx, dy)
+ for x1=x, x + dx do
+  for y1=y, y + dy do
+   if(is_solid(x1, y1)) then
+    return true
+   end
+  end
+ end
+ return false
+end
+
+function is_solid_a(actor, tx, ty)
+ local x = tx + actor.boxx
+ local y = ty + actor.boxy
+
+ return is_solid_rect(x, y, actor.boxdx, actor.boxdy)
+end
 
 -- test if a point is solid
-function isSolid (x, y)
+function is_solid (x, y)
   x = x / 8
   y = y / 8
   local val = mget(x, y)
