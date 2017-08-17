@@ -165,6 +165,7 @@ end
 
 function enemy_new(index)
  enemy = actor_new(index)
+ enemy.tag = "enemy"
  enemy_new_position(enemy)
  enemy_new_sprite(enemy)
  return enemy
@@ -199,7 +200,7 @@ function actor_get_intersect(actor)
         actor.y + actor.boxy, actor.boxdy, 
         v.x + v.boxx, v.boxdx, 
         v.y + v.boxy, v.boxdy)) then
-    printh("point_intersect")
+    printh("actor_get_intersect")
     return v
    end
   end
@@ -263,9 +264,10 @@ function actor_update(actor)
  -- check for actor interaction
  if check_col then
   local hit = actor_get_intersect(actor)
-  if it != nil then
+  if hit != nil then
    dbg = "hit: "..hit.id
-   if actor.tag == "enemy" then
+   if hit.tag == "enemy" then
+    enemy = hit.id
     state = 2
     return
    end
