@@ -22,6 +22,7 @@ function _init()
  mus_pat=0 --  0=menu, 1=explore, 2=fight
  padding=0 -- padding in world and clip
  fight = {}
+ fight.action = 0
  fight.enemy = 0
  enemies_max=1
  enemies_types=4
@@ -105,6 +106,24 @@ function draw_fight()
  sspr(player.frame * 8, 0, 8, 8, xmin + width * 0.25 - player.w, ymin - height + 8, 32, 32)
  -- draw enemy
  sspr(enemyactor.frame * 8, 0, 8, 8, xmin + screen.w - width * 0.75, ymin - height + 8, 32, 32, true, false)
+
+ if fight.current == player.id then
+  local radius = 1
+  local offset = 10
+  local p_x = cam.x + offset * 1.5
+
+  -- draw fight menu
+  print("attack", p_x, cam.y + offset)
+  print("attack", p_x, cam.y + offset * 2)
+  print("attack", p_x, cam.y + offset * 3)
+
+  -- selector bullet
+  circ(cam.x + offset, cam.y + offset * (fight.action + 1) + radius * 2, radius, 8)
+
+  -- selector line
+  local line_y = cam.y + offset * (fight.action + 1) + offset * 0.75
+  line(p_x, line_y, p_x + 24, line_y, 8)
+ end
 end
 
 function draw_padding()
@@ -122,10 +141,6 @@ function _update60()
  t += 1
  if(t % 100 == 0) then
   dbg=""
- end
-
- if btnp(4) then 
-  state = (state +1) % 3 
  end
 
  if state == 0 then
@@ -167,21 +182,69 @@ end
 ---end--------------
 
 ---start--------------
+-- math
+function dis(x1, y1, x2, y2)
+ return sqrt(pow(x1-x2) + pow(y1-y2))
+end
+
+function pow(x)
+ return x * x
+end
+
+function mag(v)
+ return dis(v.x, 0, v.y, 0)
+end
+
+function normalize(v)
+ local m = mag(v)
+ if (m == 0) return v
+ return {x=v.x/m, y=v.y/m}
+end
+
+function clamp(v, min, max)
+ if (v < min) then
+  return min
+ elseif (v > max) then
+  return max
+ end
+
+ return v
+end
+-- math
+---end--------------
+
+---start--------------
 -- enemies
 function enemy_update(index)
-local enemy = actors[index]
-local respawn = false
+ local enemy = actors[index]
+ local respawn = false
  -- spawn if nil
  if enemy == nil or 
   abs(player.x - enemy.x) > screen.w * 2 or 
   abs(player.y - enemy.y) > screen.h * 2 then
   enemy = enemy_new(index)
  end
+
+ -- move to player if in range
+ local distance = dis(enemy.x, enemy.y, player.x, player.y) 
+ if distance <= enemy.range then
+  local dir = normalize({x=player.x - enemy.x, y=player.y - enemy.y})
+  local spd = abs(sqrt(enemy.range / distance) * enemy.spd * 0.5)
+  local max_spd = enemy.spd * 1.25
+  spd = clamp(spd, enemy.spd * 0.5, max_spd)
+  printh("spd:"..spd.." dir "..dir.x.." "..dir.y)
+  enemy.vx = clamp(dir.x * spd, -max_spd, max_spd)
+  enemy.vy = clamp(dir.y * spd, -max_spd, max_spd)
+ end
 end
 
 function enemy_new(index)
+ printh("enemy_new")
  enemy = actor_new(index)
  enemy.tag = "enemy"
+ enemy.range = 50
+ enemy.frames=1
+ enemy.max_frames = 1
  enemy.h=6
  enemy.w=7
  actor_update_box(enemy)
@@ -212,14 +275,12 @@ function actor_get_intersect(actor)
  for v in all(actors) do
   if v != actor and actor.id==1 then
    -- check if the actor intersects x,y
-   printh("actor_get_intersect "..actor.x + actor.boxx.." "..actor.y + actor.boxdy.." "..v.x + v.boxx.." "..v.boxdx.." "..v.y + v.boxy.." "..v.boxdy)
 
    if (rect_intersect(
         actor.x + actor.boxx, actor.boxdx,
         actor.y + actor.boxy, actor.boxdy, 
         v.x + v.boxx, v.boxdx, 
         v.y + v.boxy, v.boxdy)) then
-    printh("actor_get_intersect")
     return v
    end
   end
@@ -234,9 +295,7 @@ function actor_get(x, y, ignore_actor)
  for v in all(actors) do
   if ignore_actor == nil or (v != ignore_actor and ignore_actor.id==1) then
    -- check if the actor intersects x,y
-   printh("actor_get "..x.." "..y.." "..v.x + v.boxx.." "..v.boxdx.." "..v.y + v.boxy.." "..v.boxdy)
    if (point_intersect(x, y, v.x + v.boxx, v.boxdx, v.y + v.boxy, v.boxdy)) then
-    printh("point_intersect")
     return v
    end
   end
@@ -287,6 +346,7 @@ function actor_update(actor)
    dbg = "hit: "..hit.id
    if hit.tag == "enemy" then
     fight.enemy = hit.id
+    fight.current = 1
     state = 2
     return
    end
@@ -312,13 +372,13 @@ function actor_update(actor)
  -- every 8th frame
  if t % 8 == 0 then
  -- which sprite to render?
-  if abs(actor.vx) < 0.1 and abs(actor.vy) < 0.1 then
+  if abs(actor.vx) < 0.3 and abs(actor.vy) < 0.3 then
    -- no movement - idle
    actor.frame = actor.spr_index
   else
    -- movement
    -- loop sprites
-   actor.frame = actor.spr_index + (abs(actor.dirx) * actor.frames) + ((actor.frame + 1) % actor.frames)
+   actor.frame = actor.spr_index + (abs(actor.dirx) * actor.frames + (actor.frame + 1) % actor.frames) % actor.max_frames
   end  
  end 
 
@@ -381,6 +441,7 @@ function actor_new(index)
  actor.spr_index=0 -- start of sheet
  actor.frame=0 -- start of animation
  actor.frames=2 -- per animation
+ actor.max_frames=4 -- per animation
  if(index == nil) then
   add(actors, actor)
   actor.id=#actors
@@ -589,7 +650,13 @@ function update_fight()
   have a padding
  ]]
  padding=8
- fight.enemy = 2
+ 
+ if fight.current == player.id then
+  -- wait for input
+ else
+  -- AI baby
+ end 
+
  player.frame = player.spr_index
  actors[fight.enemy].frame = actors[fight.enemy].spr_index
 end
