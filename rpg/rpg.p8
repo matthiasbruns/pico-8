@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
-
+draw_debug=true
 ---start--------------
 -- pico-8
 -- globals are defined in _init()
@@ -29,7 +29,17 @@ function _init()
   actors[x].spr_index=(x-1) * 4
  end
  player = actors[1]
+ player.w=2
+ player.h=5
+ actor_update_box(player)
  -- music(0)
+end
+
+function actor_update_box(actor)
+ actor.boxx=flr((8-actor.w)*0.5)
+ actor.boxdx=actor.w
+ actor.boxy=flr((8-actor.h)*0.5)
+ actor.boxdy=actor.h
 end
 
 -- pico-8 draw loop
@@ -50,12 +60,16 @@ function _draw()
   camera(cam.x, cam.y)
   -- explore rendering
   map(0, 0, 0, 0, screen.h, 32)
-  rectfill(cam.x + (screen.w - 4 - #dbg*4), cam.y, cam.x+screen.w, cam.y+10,14)
+  if draw_debug then
+    rectfill(cam.x + (screen.w - 4 - #dbg*4), cam.y, cam.x+screen.w, cam.y+10,14)
+  end
   foreach(actors, actor_draw)
  elseif state == 2 then
   draw_fight()
  end  
+if draw_debug then
   debug(128 - (#dbg*4), 2)
+end
 end
 
 function draw_fight()
@@ -166,6 +180,9 @@ end
 function enemy_new(index)
  enemy = actor_new(index)
  enemy.tag = "enemy"
+ enemy.h=6
+ enemy.w=7
+ actor_update_box(enemy)
  enemy_new_position(enemy)
  enemy_new_sprite(enemy)
  return enemy
@@ -323,8 +340,11 @@ function actor_draw(actor)
 		flip_y=true to flip vertically
 ]]
  spr(actor.frame,actor.x,actor.y,1 ,1, actor.dirx < 0, false)
- rectfill(actor.x, actor.y, actor.x + 1, actor.y + 1, 2)
- rect(actor.x + actor.boxx,actor.y + actor.boxy,actor.x + actor.boxx+ actor.boxdx,actor.y + actor.boxy+ actor.boxdy, 8)
+
+ if draw_debug then
+  rect(actor.x + actor.boxx,actor.y + actor.boxy,actor.x + actor.boxx+ actor.boxdx,actor.y + actor.boxy+ actor.boxdy, 8)
+  circ(actor.x, actor.y, 1, 2)
+ end
 end
 
 -- creates a new actor and returns its id
@@ -337,8 +357,8 @@ function actor_new(index)
  actor.cely=0
  actor.vx=0
  actor.vy=0
- actor.w=2
- actor.h=5
+ actor.w=8
+ actor.h=8
  actor.boxx=0
  actor.boxdx=7
  actor.boxy=0
