@@ -6,6 +6,7 @@ __lua__
 -- pico-8
 -- globals are defined in _init()
 function _init()
+ printh("init")
  dbg = "" -- debug message
  t = 0 --timer
 
@@ -20,7 +21,7 @@ function _init()
  state=0 -- 0=menu, 1=explore, 2=fight
  mus_pat=0 --  0=menu, 1=explore, 2=fight
  padding=0 -- padding in world and clip
- enemies_max=20
+ enemies_max=1
  enemies_types=4
  music(mus_pat)
  for x=1,1 do
@@ -183,6 +184,47 @@ end
 
 ---start--------------
 -- actors
+
+--[[
+  Checks if any actor intersects with the given
+]]
+function actor_get_intersect(actor)
+ for v in all(actors) do
+  if v != actor and actor.id==1 then
+   -- check if the actor intersects x,y
+   printh("actor_get_intersect "..actor.x + actor.boxx.." "..actor.y + actor.boxdy.." "..v.x + v.boxx.." "..v.boxdx.." "..v.y + v.boxy.." "..v.boxdy)
+
+   if (rect_intersect(
+        actor.x + actor.boxx, actor.boxdx,
+        actor.y + actor.boxy, actor.boxdy, 
+        v.x + v.boxx, v.boxdx, 
+        v.y + v.boxy, v.boxdy)) then
+    printh("point_intersect")
+    return v
+   end
+  end
+ end
+
+ return nil
+end
+
+-- gets an actor on position x,y
+-- optional ignores the given actor
+function actor_get(x, y, ignore_actor)
+ for v in all(actors) do
+  if ignore_actor == nil or (v != ignore_actor and ignore_actor.id==1) then
+   -- check if the actor intersects x,y
+   printh("actor_get "..x.." "..y.." "..v.x + v.boxx.." "..v.boxdx.." "..v.y + v.boxy.." "..v.boxdy)
+   if (point_intersect(x, y, v.x + v.boxx, v.boxdx, v.y + v.boxy, v.boxdy)) then
+    printh("point_intersect")
+    return v
+   end
+  end
+ end
+
+ return nil
+end
+
 -- updates the actor based on velocity
 function actor_update(actor)
  if abs(actor.vx) <= 0.3 then
@@ -195,8 +237,9 @@ function actor_update(actor)
  local tx = actor.x + actor.vx 
  local ty = actor.y + actor.vy
 
+ local check_col = actor.id == 1
   -- check for collision
- while is_solid_a(actor, tx, ty)  do
+ while check_col and is_solid_a(actor, tx, ty)  do
   if actor.x < tx then
    tx -= 1
   elseif actor.x > tx then
@@ -207,17 +250,27 @@ function actor_update(actor)
   elseif actor.y > ty then
    ty += 1
   end  
-
   if tx == actor.x and ty == actor.y then
    break
   end
  end
- -- check for actor interaction
 
  -- movement of
  -- current actor
  actor.x = tx
  actor.y = ty
+
+ -- check for actor interaction
+ if check_col then
+  local hit = actor_get_intersect(actor)
+  if it != nil then
+   dbg = "hit: "..hit.id
+   if actor.tag == "enemy" then
+    state = 2
+    return
+   end
+  end
+ end
  
  -- left/right
  if actor.vx < 0 then
@@ -318,10 +371,22 @@ end
 
 ---start--------------
 -- physics
-function is_solid_rect(x, y, dx, dy)
+
+-- test if an actor intersecs with
+-- a tile which has the given flag
+function has_flag_a(flag, actor, tx, ty)
+ local x = tx + actor.boxx
+ local y = ty + actor.boxy
+
+ return has_flag_rect(flag, x, y, actor.boxdx, actor.boxdy)
+end
+
+-- test if a rect intersecs with
+-- a tile which has the given flag
+function has_flag_rect(flag, x, y, dx, dy)
  for x1=x, x + dx do
   for y1=y, y + dy do
-   if(is_solid(x1, y1)) then
+   if(has_flag(flag, x1, y1)) then
     return true
    end
   end
@@ -329,39 +394,70 @@ function is_solid_rect(x, y, dx, dy)
  return false
 end
 
-function is_solid_a(actor, tx, ty)
- local x = tx + actor.boxx
- local y = ty + actor.boxy
+function has_flag(flag, x, y)
+  x = x / 8
+  y = y / 8
+  local val = mget(x, y)
+  --[[
+   the flag dot in the
+   sprite editor
+  ]]
+  local has_flag = fget(val, flag)
+  if has_flag then
+   printh("has_flag flag "..flag.." x "..x.." y "..y)
+  end
+  return has_flag
+end
 
- return is_solid_rect(x, y, actor.boxdx, actor.boxdy)
+-- test if a rect intersecs with
+-- a solid tile
+function is_solid_rect(x, y, dx, dy)
+ return has_flag_rect(1, x, y, dx, dy)
+end
+
+-- test if an actor intersecs with
+-- a solid tile
+function is_solid_a(actor, x, y)
+ return has_flag_a(1, actor, x, y)
 end
 
 -- test if a point is solid
 function is_solid (x, y)
-  x = x / 8
-  y = y / 8
-  local val = mget(x, y)
-  dbg="MGET "..val.." x "..x.." y "..y
-  --[[
-   the second (1)
-   orange dot in the
-   sprite editor is
-   the solid collision
-   flag.
-  ]]
-  return fget(val, 1)
+ return has_flag(1, x, y)
 end
 
-function isactor(x,y)
- local val = mget(x, y)
-  --[[
-   the third (2)
-   orange dot in the
-   sprite editor is
-   the solid collision
-   flag.
-  ]]
- return fget(val, 2)
+function rect_intersect(x1, dx1, y1, dy1, x2, dx2, y2, dy2)
+  local x1_min = min(x1, x1+dx1)
+  local x1_max = max(x1, x1+dx1)
+  local y1_min = min(y1, y1+dy1)
+  local y1_max = max(y1, y1+dy1)
+  local x2_min = min(x2, x2+dx2)
+  local x2_max = max(x2, x2+dx2)
+  local y2_min = min(y2, y2+dy2)
+  local y2_max = max(y2, y2+dy2)
+
+  if x1_max < x2_min or x1_min > x2_max then
+    return false
+  elseif y1_max < y2_min or y1_min > y2_max then
+    return false
+  end
+
+ return true
+end
+
+function point_intersect(x, y, x2, dx2, y2, dy2)
+  local x2_min = min(x2, x2+dx2)
+  local x2_max = max(x2, x2+dx2)
+  local y2_min = min(y2, y2+dy2)
+  local y2_max = max(y2, y2+dy2)
+
+  if x < x2_min or x > x2_max then
+    return false
+  elseif y < y2_min or y > y2_max then
+    return false
+  end
+
+ return true
 end
 -- physics
 ---end----------------
