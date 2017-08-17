@@ -21,6 +21,8 @@ function _init()
  state=0 -- 0=menu, 1=explore, 2=fight
  mus_pat=0 --  0=menu, 1=explore, 2=fight
  padding=0 -- padding in world and clip
+ fight = {}
+ fight.enemy = 0
  enemies_max=1
  enemies_types=4
  music(mus_pat)
@@ -88,7 +90,7 @@ function draw_fight()
  -- larger (screen.w * 0.5) = overlap
  local width = (screen.w * 0.5) - 10
 
- local enemyactor = actors[enemy]
+ local enemyactor = actors[fight.enemy]
  -- left rect
  rectfill(xmin, ymin - height, xmin + width, ymin, 14) 
  --right rect
@@ -284,7 +286,7 @@ function actor_update(actor)
   if hit != nil then
    dbg = "hit: "..hit.id
    if hit.tag == "enemy" then
-    enemy = hit.id
+    fight.enemy = hit.id
     state = 2
     return
    end
@@ -587,9 +589,9 @@ function update_fight()
   have a padding
  ]]
  padding=8
- enemy = 2
+ fight.enemy = 2
  player.frame = player.spr_index
- actors[enemy].frame = actors[enemy].spr_index
+ actors[fight.enemy].frame = actors[fight.enemy].spr_index
 end
 -- states
 ---end----------------
