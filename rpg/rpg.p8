@@ -7,32 +7,7 @@ draw_debug=true
 -- globals are defined in _init()
 function _init()
  printh("init")
- dbg = "" -- debug message
- t = 0 --timer
-
- -- dynamic screen sizing
- screen = {}
- screen.w=128
- screen.h=128
- actors={} -- 1:player
- cam = {}
- cam.x=0
- cam.y=0
- state=0 -- 0=menu, 1=explore, 2=fight
- mus_pat=0 --  0=menu, 1=explore, 2=fight
- padding=0 -- padding in world and clip
- fight_new()
- enemies_max=10
- enemies_types=4
- music(mus_pat)
- for x=1,1 do
-  actor_new()
-  actors[x].spr_index=(x-1) * 4
- end
- player = actors[1]
- player.w=2
- player.h=5
- actor_update_box(player)
+ game_reset()
  -- music(0)
 end
 
@@ -88,10 +63,14 @@ function _draw()
   foreach(actors, actor_draw)
  elseif state == 2 then
   draw_fight()
- end  
-if draw_debug then
-  debug(128 - (#dbg*4), 2)
-end
+ elseif state == 3 then
+  cls(8)
+  camera()
+  print("you died - x to restart", 18, 64, 7)
+ end
+ if draw_debug then
+   debug(128 - (#dbg*4), 2)
+ end
 end
 
 function draw_fight()
@@ -119,11 +98,11 @@ function draw_fight()
  line(xmin + screen.w - width * (enemy.hp / enemy.max_hp), ymin - height, xmin + screen.w, ymin - height, 11) 
 
  -- draw player
- local offset = draw_vxf(player)
- sspr(player.frame * 8, 0, 8, 8, xmin + width * 0.25 - player.w + offset.x, ymin - height + 8 + offset.y, 32, 32)
+ local vfx = draw_vxf(player)
+ sspr(player.frame * 8, 0, 8, 8, xmin + width * 0.25 - player.w + vfx.x, ymin - height + 8 + vfx.y, 32 * vfx.xs, 32 * vfx.ys)
  -- draw enemy
- offset = draw_vxf(enemy)
- sspr(enemy.frame * 8, 0, 8, 8, xmin + screen.w - width * 0.75, ymin - height + 8, 32, 32, true, false)
+ vfx = draw_vxf(enemy)
+ sspr(enemy.frame * 8, 0, 8, 8, xmin + screen.w - width * 0.75, ymin - height + 8, 32 * vfx.xs , 32 * vfx.ys, true, false)
 
  if fight.current == player.id then
   local radius = 1
@@ -148,10 +127,21 @@ end
 function draw_vxf(actor)
  local x_off = 0
  local y_off = 0
- if(actor.vfx != nil and actor.vfx == "attack" and t % 2 == 0) then
+ local x_scale = 1
+ local y_scale = 1
+
+ if(actor.vfx != nil and t % 2 == 0) then
+  return {x=x_off, y=y_off, xs = x_scale, ys = y_scale}
+ end
+
+ if(actor.vfx == "attack" ) then
   x_off = (t % 3 - 1) * 4
  end
- return {x=x_off, y=y_off}
+ if(actor.vfx == "hit" ) then
+  y_scale = (t % 3 + 1) * 0.5
+ end
+
+ return {x=x_off, y=y_off, xs = x_scale, ys = y_scale}
 end
 
 function draw_padding()
@@ -180,6 +170,11 @@ function _update60()
  elseif state == 2 then
   -- fight state updates
   update_fight()
+  elseif state == 3 then
+  -- death
+  if (btnp(4)) then 
+   game_reset() 
+  end
  end
 end
 -- pico-8
@@ -237,6 +232,45 @@ function clamp(v, min, max)
  end
 
  return v
+end
+-- math
+---end--------------
+
+---start--------------
+-- player
+function player_new()
+ player = actor_new(1)
+ player = actors[1]
+ player.w=2
+ player.h=5
+ actor_update_box(player)
+end
+
+function player_die()
+ player.hp = 0
+ state = 3
+end
+
+function game_reset()
+ dbg = "" -- debug message
+ t = 0 --timer
+
+ -- dynamic screen sizing
+ screen = {}
+ screen.w=128
+ screen.h=128
+ actors={} -- 1:player
+ cam = {}
+ cam.x=0
+ cam.y=0
+ state=0 --  0=menu, 1=explore, 2=fight,3=dead
+ mus_pat=0 --  0=menu, 1=explore, 2=fight,3=dead
+ padding=0 -- padding in world and clip
+ fight_new()
+ enemies_max=10
+ enemies_types=4
+ music(mus_pat)
+ player_new()
 end
 -- math
 ---end--------------
@@ -493,7 +527,7 @@ end
 
 ---start--------------
 -- actions
-function action_default(action, frame)
+function action_default(action, frame, instigator, target)
  if (state == 2) then
   return fight_action_default(action, frame)
  end
@@ -501,15 +535,15 @@ function action_default(action, frame)
 end
 
 function fight_action_default(action, frame)
- local actor = actors[fight.current]
+ local instigator = actors[fight.current]
  local target = actors[fight.target]
 
  if(frame == 0) then
-  actor.vfx="attack"
+  instigator.vfx="attack"
  end
- if(frame == action.frames -2 or frame == action.frames) then
+ if(frame == action.frames -8 or frame == action.frames) then
   -- reset vfx
-  actor.vfx=nil
+  instigator.vfx=nil
   -- target hit vfx
   target.vfx="hit"
  end
@@ -719,18 +753,9 @@ function update_fight()
  local enemy = actors[fight.enemy]
  player.frame =player.spr_index
  enemy.frame = enemy.spr_index
- 
+
  if fight.current == player.id then
   fight.target = fight.enemy
-  -- run through current action
-  if fight.action_frames > 0 then
-   local action = fight.actions[fight.action]
-   local remaining = player.attack(action, action.frames - fight.action_frames +1)
-   printh("fight frames "..fight.action_frames.. " remaining "..remaining.." action frames"..action.frames)
-   fight.action_frames = remaining
-   return
-  end
-
   -- wait for input
   if btnp(2) then -- up
    fight.action = (fight.action - 1 % #fight.actions)
@@ -742,11 +767,20 @@ function update_fight()
   if btnp(5) then
    fight.action_frames = player.attack(fight.actions[fight.action], 0)
   end
-
  else
- fight.target = player.id
- -- AI baby
+  fight.target = player.id
+  -- AI baby
+  if (fight.action_frames  <= 0) fight.action_frames = enemy.attack(fight.actions[fight.action], 0)
  end 
+ -- run through current action
+ if fight.action_frames > 0 then
+  local action = fight.actions[fight.action]
+  local remaining = actors[fight.current].attack(action, action.frames - fight.action_frames +1)
+  printh("fight frames "..fight.action_frames.. " remaining "..remaining.." action frames"..action.frames)
+  fight.action_frames = remaining
+  if (remaining <= 0) fight.current = fight.target
+  return
+ end
 
  -- check for hp
  if(enemy.hp <= 0) then
@@ -755,7 +789,10 @@ function update_fight()
   fight_reset()
   state = 1
  end
- 
+
+ if(player.hp <= 0) then
+  player_die()
+ end
 end
 -- states
 ---end----------------
