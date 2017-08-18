@@ -22,8 +22,12 @@ function _init()
  mus_pat=0 --  0=menu, 1=explore, 2=fight
  padding=0 -- padding in world and clip
  fight = {}
- fight.action = 0
+ fight.action = 1
  fight.enemy = 0
+ fight.actions = {}
+ add(fight.actions, "attack")
+ add(fight.actions, "attack2")
+ add(fight.actions, "attack3")
  enemies_max=1
  enemies_types=4
  music(mus_pat)
@@ -113,16 +117,17 @@ function draw_fight()
   local p_x = cam.x + offset * 1.5
 
   -- draw fight menu
-  print("attack", p_x, cam.y + offset)
-  print("attack", p_x, cam.y + offset * 2)
-  print("attack", p_x, cam.y + offset * 3)
+
+  for k,v in pairs(fight.actions) do
+   print(""..v, p_x, cam.y + offset * k)
+  end
 
   -- selector bullet
-  circ(cam.x + offset, cam.y + offset * (fight.action + 1) + radius * 2, radius, 8)
+  circ(cam.x + offset, cam.y + offset * (fight.action) + radius * 2, radius, 8)
 
   -- selector line
-  local line_y = cam.y + offset * (fight.action + 1) + offset * 0.75
-  line(p_x, line_y, p_x + 24, line_y, 8)
+  local line_y = cam.y + offset * (fight.action) + offset * 0.5
+  line(p_x, line_y, p_x + #fight.actions[fight.action] * 3, line_y, 8)
  end
 end
 
@@ -653,8 +658,15 @@ function update_fight()
  
  if fight.current == player.id then
   -- wait for input
+  if btnp(2) then -- up
+   fight.action = (fight.action - 1 % #fight.actions)
+   if (fight.action <= 0) fight.action = #fight.actions
+  elseif btnp(3) then -- down
+   fight.action = (fight.action % #fight.actions) + 1
+  end
+  printh(""..fight.action)
  else
-  -- AI baby
+ -- AI baby
  end 
 
  player.frame = player.spr_index
