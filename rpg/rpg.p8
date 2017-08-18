@@ -2,14 +2,79 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 draw_debug=true
----start--------------
+---start------------------------
 -- pico-8
--- globals are defined in _init()
+
+-- globals are defined in 
+-- _init()
 function _init()
  printh("init")
  game_reset()
- -- music(0)
 end
+
+-- pico-8 update loop
+function _update60()
+ -- counter 
+ t += 1
+ if(t % 100 == 0) then
+  dbg=""
+ end
+
+ if state == 0 then
+  -- menu state updates 
+  update_menu()
+ elseif state == 1 then
+  -- explore state updates
+  update_explore()
+ elseif state == 2 then
+  -- fight state updates
+  update_fight()
+ elseif state == 3 then
+  -- death
+  if (btnp(5)) then 
+   game_reset() 
+  end
+ end
+end
+
+-- pico-8 draw loop
+function _draw()
+ if state == 0 then 
+  -- menu rendering
+  cls(0)
+  draw_padding()
+  camera()
+  -- name of the game
+  print("pico-8 rpg framework", 25, 16, 7)
+  -- start game instructions
+  print("press x to start", 32, 64, 7)
+ elseif state == 1 then
+  -- explore rendering
+  cls(3)
+  draw_padding()
+
+  camera(cam.x, cam.y)
+  
+  map(0, 0, 0, 0, screen.h, 32)
+  if draw_debug then
+    rectfill(cam.x + (screen.w - 4 - #dbg*4), cam.y, cam.x+screen.w, cam.y+10,14)
+  end
+  foreach(actors, actor_draw)
+ elseif state == 2 then
+  -- renders the fight scene
+  draw_fight()
+ elseif state == 3 then
+  -- renders the player death scene
+  cls(8)
+  camera()
+  print("you died - x to restart", 18, 64, 7)
+ end
+ if draw_debug then
+   debug(128 - (#dbg*4), 2)
+ end
+end
+-- pico-8
+---end--------------------------
 
 function fight_new()
  fight = {}
@@ -39,43 +104,9 @@ function actor_update_box(actor)
  actor.boxdy=actor.h
 end
 
--- pico-8 draw loop
-function _draw()
- if state == 0 then 
-  -- menu rendering
-  cls(0)
-  draw_padding()
-  camera()
-  -- name of the game
-  print("pico-8 rpg framework", 25, 16, 7)
-  -- start game instructions
-  print("press x to start", 32, 64, 7)
- elseif state == 1 then
-  cls(3)
-  draw_padding()
-
-  camera(cam.x, cam.y)
-  -- explore rendering
-  map(0, 0, 0, 0, screen.h, 32)
-  if draw_debug then
-    rectfill(cam.x + (screen.w - 4 - #dbg*4), cam.y, cam.x+screen.w, cam.y+10,14)
-  end
-  foreach(actors, actor_draw)
- elseif state == 2 then
-  draw_fight()
- elseif state == 3 then
-  cls(8)
-  camera()
-  print("you died - x to restart", 18, 64, 7)
- end
- if draw_debug then
-   debug(128 - (#dbg*4), 2)
- end
-end
 
 function draw_fight()
  cls(7)
- --draw_padding()
 
  -- fight panels
  local xmin = cam.x
@@ -153,32 +184,6 @@ function draw_padding()
  end
 end
 
--- pico-8 update loop
-function _update60()
- -- counter 
- t += 1
- if(t % 100 == 0) then
-  dbg=""
- end
-
- if state == 0 then
-  -- menu state updates 
-  update_menu()
- elseif state == 1 then
-  -- explore state updates
-  update_explore()
- elseif state == 2 then
-  -- fight state updates
-  update_fight()
-  elseif state == 3 then
-  -- death
-  if (btnp(4)) then 
-   game_reset() 
-  end
- end
-end
--- pico-8
----end--------------
 
 --[[
  debug command to display 
@@ -277,16 +282,31 @@ end
 
 ---start--------------
 -- enemies
+
+--[[
+ updates the enemy actors.
+ respawns them if they are dead
+ or out or reach
+]]
 function enemy_update(index)
  local enemy = actors[index]
  local respawn = false
- -- spawn if nil
+ --[[
+  spawn a new enemy if nil
+  or dead or out of reach
+  ]] 
  if enemy == nil or enemy.hp <= 0 or 
   abs(player.x - enemy.x) > screen.w * 2 or 
   abs(player.y - enemy.y) > screen.h * 2 then
   enemy = enemy_new(index)
  end
 
+ --[[
+  call to remove the enemy from
+  the game. call when the enemy has
+  hp < 0 or if you want to get rid
+  of it.
+ ]]
  function enemy_die(enemy)
   dbg="Good Job!"
   printh("enemy_die")
@@ -295,7 +315,7 @@ function enemy_update(index)
   enemy = nil
  end
 
- -- move to player if in range
+ -- move to the player if in range
  local distance = dis(enemy.x, enemy.y, player.x, player.y) 
  if distance <= enemy.range then
   local dir = normalize({x=player.x - enemy.x, y=player.y - enemy.y})
@@ -307,6 +327,11 @@ function enemy_update(index)
  end
 end
 
+--[[
+ spawns a new enemy
+ wit the given index as its
+ new id
+]]
 function enemy_new(index)
  printh("enemy_new")
  enemy = actor_new(index)
@@ -527,6 +552,30 @@ end
 
 ---start--------------
 -- actions
+
+--[[
+ default action handler
+
+ @param action
+   the action object which 
+   should be handled
+ @param frame
+   the current frame of
+   the given action
+ @param instigator
+   optional
+   the actor who triggered
+   the action
+ @param target
+    optional
+    the target, on which 
+    the action should be
+    applied     
+
+ @return
+    the remaining frames
+    of the current action
+]]
 function action_default(action, frame, instigator, target)
  if (state == 2) then
   return fight_action_default(action, frame)
@@ -534,23 +583,60 @@ function action_default(action, frame, instigator, target)
  return -1
 end
 
+--[[
+ default fight action handler
+ this handler will apply
+ damage and vfx on the target
+ and the vfx on the instigator
+
+ @param action
+   the fight action object 
+   which should be handled
+ @param frame
+   the current frame of
+   the given action
+        
+ @return
+    the remaining frames
+    of the current action
+]]
 function fight_action_default(action, frame)
  local instigator = actors[fight.current]
  local target = actors[fight.target]
 
+ printh(action.name.." "..action.frames.." "..frame)
+
+ --[[
+  first fame
+  apply vfx on instigator
+ ]]
  if(frame == 0) then
   instigator.vfx="attack"
  end
+
+ --[[
+  8 frames before end or last frame
+
+  reset vfx on instigator and
+  apply vfx on target
+ ]]
  if(frame == action.frames -8 or frame == action.frames) then
   -- reset vfx
   instigator.vfx=nil
   -- target hit vfx
   target.vfx="hit"
  end
+
+ --[[
+  last frame
+  apply damage
+  and reset vfx of target
+ ]]
  if(frame == action.frames) then
   target.vfx=0
   target.hp -= action.dmg
  end
+
  return action.frames - frame
 end
 -- attacks
@@ -560,8 +646,27 @@ end
 ---start--------------
 -- physics
 
--- test if an actor intersecs with
--- a tile which has the given flag
+--[[
+ test if an actor intersecs with
+ a tile which has the given flag
+
+ @param flag
+   the flag index 0..7 to test
+ @param actor
+   the actor box is used to check
+   if the flag is in the boxes
+   area
+ @param tx 
+   the x position where the box should
+   box should be positioned at
+ @param yx 
+   the y position where the box should
+   box should be positioned at
+
+ @return 
+   true if flag is in the box
+   bounds at the given position
+]]
 function has_flag_a(flag, actor, tx, ty)
  local x = tx + actor.boxx
  local y = ty + actor.boxy
@@ -569,8 +674,24 @@ function has_flag_a(flag, actor, tx, ty)
  return has_flag_rect(flag, x, y, actor.boxdx, actor.boxdy)
 end
 
--- test if a rect intersecs with
--- a tile which has the given flag
+--[[
+ test if a flag is in the area
+ of the rect defined by x, y, dx, dy
+
+ @param flag
+   the flag index 0..7 to test
+ @param x
+   the x starting position of the rect
+ @param y
+   the y starting position of the rect
+ @param dx
+   the width of the rect
+ @param dy
+   the height of the rect
+
+ @return 
+   true if flag is in the rect
+]]
 function has_flag_rect(flag, x, y, dx, dy)
  for x1=x, x + dx do
   for y1=y, y + dy do
@@ -582,14 +703,31 @@ function has_flag_rect(flag, x, y, dx, dy)
  return false
 end
 
+--[[
+ test if a flag is in the 
+ position x,y
+
+ @param flag
+   the flag index 0..7 to test
+ @param x
+   the x position
+ @param y
+   the y position
+
+ @return 
+   true if flag is in the position
+]]
 function has_flag(flag, x, y)
+  -- we need to convert the pixel position
+  -- to our grid
+  -- one tile is 8x8
   x = x / 8
   y = y / 8
+  
   local val = mget(x, y)
-  --[[
-   the flag dot in the
-   sprite editor
-  ]]
+
+  -- the flag dot in the
+  -- sprite editor
   return fget(val, flag)
 end
 
@@ -754,6 +892,20 @@ function update_fight()
  player.frame =player.spr_index
  enemy.frame = enemy.spr_index
 
+ -- check for hp
+ if(enemy.hp <= 0) then
+  -- destroy enemy
+  enemy_die(enemy)
+  fight_reset()
+  state = 1
+  return
+ end
+
+ if(player.hp <= 0) then
+  player_die()
+  return
+ end
+
  if fight.current == player.id then
   fight.target = fight.enemy
   -- wait for input
@@ -778,20 +930,12 @@ function update_fight()
   local remaining = actors[fight.current].attack(action, action.frames - fight.action_frames +1)
   printh("fight frames "..fight.action_frames.. " remaining "..remaining.." action frames"..action.frames)
   fight.action_frames = remaining
-  if (remaining <= 0) fight.current = fight.target
-  return
- end
-
- -- check for hp
- if(enemy.hp <= 0) then
-  -- destroy enemy
-  enemy_die(enemy)
-  fight_reset()
-  state = 1
- end
-
- if(player.hp <= 0) then
-  player_die()
+  if (remaining <= 0) then 
+    fight.current = fight.target
+    printh("e:"..enemy.hp)
+    printh("p:"..player.hp)
+    return
+  end
  end
 end
 -- states
