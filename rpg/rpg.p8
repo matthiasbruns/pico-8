@@ -21,14 +21,8 @@ function _init()
  state=0 -- 0=menu, 1=explore, 2=fight
  mus_pat=0 --  0=menu, 1=explore, 2=fight
  padding=0 -- padding in world and clip
- fight = {}
- fight.action = 1
- fight.enemy = 0
- fight.actions = {}
- add(fight.actions, "attack")
- add(fight.actions, "attack2")
- add(fight.actions, "attack3")
- enemies_max=1
+ fight_new()
+ enemies_max=10
  enemies_types=4
  music(mus_pat)
  for x=1,1 do
@@ -40,6 +34,27 @@ function _init()
  player.h=5
  actor_update_box(player)
  -- music(0)
+end
+
+function fight_new()
+ fight = {}
+ fight.action = 1
+ fight.enemy = 0
+ fight.actions = {}
+ fight.action_frames = 0
+ add(fight.actions, fight_action_new("attack 1", 16, 2))
+ add(fight.actions, fight_action_new("attack 2", 24, 4))
+ add(fight.actions, fight_action_new("attack 3", 12, 2))
+end
+
+function fight_reset()
+ printh("fight_reset")
+ fight.action = 1
+ fight.enemy = 0
+end
+
+function fight_action_new(name, frames, dmg)
+ return {name=name, frames=frames, dmg=dmg}
 end
 
 function actor_update_box(actor)
@@ -83,9 +98,6 @@ function draw_fight()
  cls(7)
  --draw_padding()
 
- -- fight rendering
- map(0, 0, 0, 0, screen.h, 32)
-
  -- fight panels
  local xmin = cam.x
  -- align bottom
@@ -95,21 +107,23 @@ function draw_fight()
  -- larger (screen.w * 0.5) = overlap
  local width = (screen.w * 0.5) - 10
 
- local enemyactor = actors[fight.enemy]
+ local enemy = actors[fight.enemy]
  -- left rect
  rectfill(xmin, ymin - height, xmin + width, ymin, 14) 
  --right rect
  rectfill(xmin + screen.w, ymin - height, xmin + screen.w - width, ymin, 13) 
 
- -- left health
- line(xmin, ymin - height, xmin + width * (enemyactor.health / enemyactor.max_health), ymin - height, 11) 
- -- right health
- line(xmin + screen.w - width * (enemyactor.health / enemyactor.max_health), ymin - height, xmin + screen.w, ymin - height, 11) 
+ -- left hp
+ line(xmin, ymin - height, xmin + width * (player.hp / player.max_hp), ymin - height, 11) 
+ -- right hp
+ line(xmin + screen.w - width * (enemy.hp / enemy.max_hp), ymin - height, xmin + screen.w, ymin - height, 11) 
 
  -- draw player
- sspr(player.frame * 8, 0, 8, 8, xmin + width * 0.25 - player.w, ymin - height + 8, 32, 32)
+ local offset = draw_vxf(player)
+ sspr(player.frame * 8, 0, 8, 8, xmin + width * 0.25 - player.w + offset.x, ymin - height + 8 + offset.y, 32, 32)
  -- draw enemy
- sspr(enemyactor.frame * 8, 0, 8, 8, xmin + screen.w - width * 0.75, ymin - height + 8, 32, 32, true, false)
+ offset = draw_vxf(enemy)
+ sspr(enemy.frame * 8, 0, 8, 8, xmin + screen.w - width * 0.75, ymin - height + 8, 32, 32, true, false)
 
  if fight.current == player.id then
   local radius = 1
@@ -119,7 +133,7 @@ function draw_fight()
   -- draw fight menu
 
   for k,v in pairs(fight.actions) do
-   print(""..v, p_x, cam.y + offset * k)
+   print(""..v.name, p_x, cam.y + offset * k)
   end
 
   -- selector bullet
@@ -127,8 +141,17 @@ function draw_fight()
 
   -- selector line
   local line_y = cam.y + offset * (fight.action) + offset * 0.5
-  line(p_x, line_y, p_x + #fight.actions[fight.action] * 3, line_y, 8)
+  line(p_x, line_y, p_x + #fight.actions[fight.action].name * 4, line_y, 8)
  end
+end
+
+function draw_vxf(actor)
+ local x_off = 0
+ local y_off = 0
+ if(actor.vfx != nil and actor.vfx == "attack" and t % 2 == 0) then
+  x_off = (t % 3 - 1) * 4
+ end
+ return {x=x_off, y=y_off}
 end
 
 function draw_padding()
@@ -224,10 +247,18 @@ function enemy_update(index)
  local enemy = actors[index]
  local respawn = false
  -- spawn if nil
- if enemy == nil or 
+ if enemy == nil or enemy.hp <= 0 or 
   abs(player.x - enemy.x) > screen.w * 2 or 
   abs(player.y - enemy.y) > screen.h * 2 then
   enemy = enemy_new(index)
+ end
+
+ function enemy_die(enemy)
+  dbg="Good Job!"
+  printh("enemy_die")
+  enemy.hp = 0
+  actors[enemy.id] = nil
+  enemy = nil
  end
 
  -- move to player if in range
@@ -237,7 +268,6 @@ function enemy_update(index)
   local spd = abs(sqrt(enemy.range / distance) * enemy.spd * 0.5)
   local max_spd = enemy.spd * 1.25
   spd = clamp(spd, enemy.spd * 0.5, max_spd)
-  printh("spd:"..spd.." dir "..dir.x.." "..dir.y)
   enemy.vx = clamp(dir.x * spd, -max_spd, max_spd)
   enemy.vy = clamp(dir.y * spd, -max_spd, max_spd)
  end
@@ -259,8 +289,8 @@ function enemy_new(index)
 end
 
 function enemy_new_position(enemy)
- enemy.x = player.x + enemy.dirx * rnd(screen.w)--+ enemy.dirx * screen.w * 0.5
- enemy.y = player.y + enemy.diry * rnd(screen.h)--+ enemy.diry * screen.h * 0.5
+ enemy.x = player.x + enemy.dirx * rnd(screen.w) + enemy.dirx * screen.w * 0.5
+ enemy.y = player.y + enemy.diry * rnd(screen.h) + enemy.diry * screen.h * 0.5
 end
 
 function enemy_new_sprite(enemy)
@@ -278,7 +308,7 @@ end
 ]]
 function actor_get_intersect(actor)
  for v in all(actors) do
-  if v != actor and actor.id==1 then
+  if v != actor and actor.id==1 and v.hp > 0 then
    -- check if the actor intersects x,y
 
    if (rect_intersect(
@@ -440,13 +470,14 @@ function actor_new(index)
  else 
   actor.diry = 1
  end 
- actor.health=10
- actor.max_health=10
+ actor.hp=10
+ actor.max_hp=10
  actor.spd=1
  actor.spr_index=0 -- start of sheet
  actor.frame=0 -- start of animation
  actor.frames=2 -- per animation
  actor.max_frames=4 -- per animation
+ actor.attack = action_default
  if(index == nil) then
   add(actors, actor)
   actor.id=#actors
@@ -458,6 +489,39 @@ function actor_new(index)
 end
 -- actors
 ---end----------------
+
+
+---start--------------
+-- actions
+function action_default(action, frame)
+ if (state == 2) then
+  return fight_action_default(action, frame)
+ end
+ return -1
+end
+
+function fight_action_default(action, frame)
+ local actor = actors[fight.current]
+ local target = actors[fight.target]
+
+ if(frame == 0) then
+  actor.vfx="attack"
+ end
+ if(frame == action.frames -2 or frame == action.frames) then
+  -- reset vfx
+  actor.vfx=nil
+  -- target hit vfx
+  target.vfx="hit"
+ end
+ if(frame == action.frames) then
+  target.vfx=0
+  target.hp -= action.dmg
+ end
+ return action.frames - frame
+end
+-- attacks
+---end----------------
+
 
 ---start--------------
 -- physics
@@ -492,11 +556,7 @@ function has_flag(flag, x, y)
    the flag dot in the
    sprite editor
   ]]
-  local has_flag = fget(val, flag)
-  if has_flag then
-   printh("has_flag flag "..flag.." x "..x.." y "..y)
-  end
-  return has_flag
+  return fget(val, flag)
 end
 
 -- test if a rect intersecs with
@@ -655,8 +715,22 @@ function update_fight()
   have a padding
  ]]
  padding=8
+
+ local enemy = actors[fight.enemy]
+ player.frame =player.spr_index
+ enemy.frame = enemy.spr_index
  
  if fight.current == player.id then
+  fight.target = fight.enemy
+  -- run through current action
+  if fight.action_frames > 0 then
+   local action = fight.actions[fight.action]
+   local remaining = player.attack(action, action.frames - fight.action_frames +1)
+   printh("fight frames "..fight.action_frames.. " remaining "..remaining.." action frames"..action.frames)
+   fight.action_frames = remaining
+   return
+  end
+
   -- wait for input
   if btnp(2) then -- up
    fight.action = (fight.action - 1 % #fight.actions)
@@ -664,13 +738,24 @@ function update_fight()
   elseif btnp(3) then -- down
    fight.action = (fight.action % #fight.actions) + 1
   end
-  printh(""..fight.action)
+  
+  if btnp(5) then
+   fight.action_frames = player.attack(fight.actions[fight.action], 0)
+  end
+
  else
+ fight.target = player.id
  -- AI baby
  end 
 
- player.frame = player.spr_index
- actors[fight.enemy].frame = actors[fight.enemy].spr_index
+ -- check for hp
+ if(enemy.hp <= 0) then
+  -- destroy enemy
+  enemy_die(enemy)
+  fight_reset()
+  state = 1
+ end
+ 
 end
 -- states
 ---end----------------
