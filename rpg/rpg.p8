@@ -245,7 +245,7 @@ end
 -- player
 function player_new()
  player = actor_new(1)
- player = actors[1]
+ player.tag="player"
  player.w=2
  player.h=5
  actor_update_box(player)
@@ -281,7 +281,46 @@ end
 ---end--------------
 
 ---start--------------
+-- items
+function item_spawn(type, x, y)
+  local item = actor_new()
+  item.tag="item"
+  item.type=type
+  item.x=x
+  item.y=y
+  item.spd=0
+  item.spr_index = 64 + type
+  item.frame=0
+  item.frames=0
+  item.max_frames=1
+  item.apply = function(target)
+    target.hp += 50
+    if( target.hp > target.max_hp) target.hp = target.max_hp
+
+    actor_destroy(item)
+  end
+  return item
+end
+-- items
+---end--------------
+
+---start--------------
 -- enemies
+--[[
+call to remove the enemy from
+the game. call when the enemy has
+hp < 0 or if you want to get rid
+of it.
+]]
+function enemy_die(enemy)
+  dbg="Good Job!"
+  printh("enemy_die")
+  enemy.hp = 0
+
+  -- spawn health
+  item_spawn(0, enemy.x, enemy.y)
+  actor_destroy(enemy)
+end
 
 --[[
  updates the enemy actors.
@@ -299,32 +338,19 @@ function enemy_update(index)
   abs(player.x - enemy.x) > screen.w * 2 or 
   abs(player.y - enemy.y) > screen.h * 2 then
   enemy = enemy_new(index)
- end
-
- --[[
-  call to remove the enemy from
-  the game. call when the enemy has
-  hp < 0 or if you want to get rid
-  of it.
- ]]
- function enemy_die(enemy)
-  dbg="Good Job!"
-  printh("enemy_die")
-  enemy.hp = 0
-  actors[enemy.id] = nil
-  enemy = nil
- end
+  if(enemy == nil) return
+ end 
 
  -- move to the player if in range
  local distance = dis(enemy.x, enemy.y, player.x, player.y) 
- if distance <= enemy.range then
-  local dir = normalize({x=player.x - enemy.x, y=player.y - enemy.y})
-  local spd = abs(sqrt(enemy.range / distance) * enemy.spd * 0.5)
-  local max_spd = enemy.spd * 1.25
-  spd = clamp(spd, enemy.spd * 0.5, max_spd)
-  enemy.vx = clamp(dir.x * spd, -max_spd, max_spd)
-  enemy.vy = clamp(dir.y * spd, -max_spd, max_spd)
- end
+  if distance <= enemy.range then
+    local dir = normalize({x=player.x - enemy.x, y=player.y - enemy.y})
+    local spd = abs(sqrt(enemy.range / distance) * enemy.spd * 0.5)
+    local max_spd = enemy.spd * 1.25
+    spd = clamp(spd, enemy.spd * 0.5, max_spd)
+    enemy.vx = clamp(dir.x * spd, -max_spd, max_spd)
+    enemy.vy = clamp(dir.y * spd, -max_spd, max_spd)
+  end
 end
 
 --[[
@@ -444,6 +470,12 @@ function actor_update(actor)
     state = 2
     return
    end
+   if hit.tag == "item" then
+    if hit.type == 0 then
+      hit.apply(actor)
+    end
+    return
+   end   
   end
  end
  
@@ -506,7 +538,8 @@ end
 -- creates a new actor and returns its id
 function actor_new(index)
  local actor = {}
- actor.tag="player"
+ actor.tag=""
+ actor.type=0
  actor.x=0
  actor.y=118
  actor.celx=0
@@ -515,6 +548,7 @@ function actor_new(index)
  actor.vy=0
  actor.w=8
  actor.h=8
+ actor.range=50
  actor.boxx=0
  actor.boxdx=7
  actor.boxy=0
@@ -545,6 +579,11 @@ function actor_new(index)
   actors[index] = actor
  end
  return actor
+end
+
+function actor_destroy(actor)
+  actors[actor.id] = nil
+  actor = nil
 end
 -- actors
 ---end----------------
@@ -906,24 +945,27 @@ function update_fight()
   return
  end
 
- if fight.current == player.id then
-  fight.target = fight.enemy
-  -- wait for input
-  if btnp(2) then -- up
-   fight.action = (fight.action - 1 % #fight.actions)
-   if (fight.action <= 0) fight.action = #fight.actions
-  elseif btnp(3) then -- down
-   fight.action = (fight.action % #fight.actions) + 1
-  end
-  
-  if btnp(5) then
-   fight.action_frames = player.attack(fight.actions[fight.action], 0)
-  end
- else
-  fight.target = player.id
-  -- AI baby
-  if (fight.action_frames  <= 0) fight.action_frames = enemy.attack(fight.actions[fight.action], 0)
- end 
+ if fight.action_frames <= 0 then
+  if fight.current == player.id then
+    fight.target = fight.enemy
+    -- wait for input
+    if btnp(2) then -- up
+    fight.action = (fight.action - 1 % #fight.actions)
+    if (fight.action <= 0) fight.action = #fight.actions
+    elseif btnp(3) then -- down
+    fight.action = (fight.action % #fight.actions) + 1
+    end
+    
+    if btnp(5) then
+    fight.action_frames = player.attack(fight.actions[fight.action], 0)
+    end
+  else
+    fight.target = player.id
+    -- AI baby
+    if (fight.action_frames  <= 0) fight.action_frames = enemy.attack(fight.actions[fight.action], 0)
+  end 
+end 
+
  -- run through current action
  if fight.action_frames > 0 then
   local action = fight.actions[fight.action]
@@ -976,10 +1018,10 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+02202200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+02888200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00282000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
